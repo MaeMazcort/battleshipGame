@@ -6,8 +6,11 @@
 #include <sys/wait.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <semaphore.h>
+#include <mutex.h>
 char boardP1[10][10] = {'.'}; // Create the board for player 1
 char boardP2[10][10] = {'.'}; // Create the board for player 2
+sem_t sem_P1, sem_P2; // Create the semaphores for the players
 
 // Create a struct to store the coordinates of the ships
 typedef struct{
@@ -57,10 +60,64 @@ void showInstructions(){
     close(fd);
 }
 
+// TODO: Finish the function
+void placeShips(){
+    // FIXME
+}
+
+void* playerInputThread(void* arg){
+    // FIXME
+
+    return NULL;
+}
+
 int main(){
     initBoard(boardP1);
     initBoard(boardP2);
-    printMatrix(boardP1, 1);
+    
+    pid_t pid;
+    pid = fork();
+
+    if(pid == 0){ // Child process, player 2
+        // Initialize the semaphores
+        sem_init(&sem_P1, 0, 0);
+        sem_init(&sem_P2, 0, 1);
+
+        // Create the threads
+        pthread_t inputThread, updateThread;
+        pthread_create(&inputThread, NULL, playerInputThread, NULL);
+        pthread_create(&updateThread, NULL, playerUpdateThread, NULL);
+
+        // Wait for the threads to finish
+        pthread_join(inputThread, NULL);
+        pthread_join(updateThread, NULL);
+
+        // Destroy the semaphores
+        sem_destroy(&sem_P1);
+        sem_destroy(&sem_P2);
+    }
+    else if(pid > 0){ // Parent process, player 1
+        // Initialize the semaphores
+        sem_init(&sem_P1, 0, 1);
+        sem_init(&sem_P2, 0, 0);
+
+        // Create the threads
+        pthread_t inputThread, updateThread;
+        pthread_create(&inputThread, NULL, playerInputThread, NULL);
+        pthread_create(&updateThread, NULL, playerUpdateThread, NULL);
+
+        // Wait for the threads to finish
+        pthread_join(inputThread, NULL);
+        pthread_join(updateThread, NULL);
+
+        // Destroy the semaphores
+        sem_destroy(&sem_P1);
+        sem_destroy(&sem_P2);
+    }   
+    else{
+        perror("Error creating the process");
+        exit(1);
+    }
 
     return 0;
 }
