@@ -14,7 +14,7 @@ sem_t sem_P1, sem_P2; // Create the semaphores for the players
 
 // Create a struct to store the coordinates of the ships
 typedef struct{
-    int x;
+    char x;
     int y;
 }coord;
 
@@ -65,8 +65,31 @@ void placeShips(){
     // FIXME
 }
 
+int toNumber(char letter){
+    // Convert the letter to uppercase
+    if(letter >= 97 && letter <= 122)
+        letter -= 32;
+
+    // Convert the letter to a number
+    return letter - 65;
+}
+
+int validateCoordinates(coord coordinates){
+    // Check if the coordinates are valid
+    if(toNumber(coordinates.x) < 0 || toNumber(coordinates.x) > 9 || coordinates.y < 0 || coordinates.y > 9){
+        printf("Invalid coordinates\n");
+        return 0;
+    }
+
+    return 1;
+}
+
 void* playerInputThread(void* arg){
-    // FIXME
+    // Reads the input from the user
+    while(1){
+        // Read the coordinates and validate them
+
+    }
 
     return NULL;
 }
