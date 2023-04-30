@@ -7,7 +7,6 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <semaphore.h>
-#include <mutex.h>
 char boardP1[10][10] = {'.'}; // Create the board for player 1
 char boardP2[10][10] = {'.'}; // Create the board for player 2
 sem_t sem_P1, sem_P2; // Create the semaphores for the players
@@ -18,12 +17,33 @@ typedef struct{
     int y;
 }coord;
 
-// Print matrix
-void printMatrix(char matrix[10][10], int player){
-    // Print the player
-    if(player == 1) printf("Player 1\n");
-    else printf("Player 2\n");
+typedef struct{
+    int ship5;
+    int ship4;
+    int ship3;
+    int ship2;
+}shipsPerPlayer;
 
+shipsPerPlayer shipsP1, shipsP2;
+
+// Initialize the ships
+void initShipsPerPlayer(shipsPerPlayer *ships){
+    ships->ship5 = 5;
+    ships->ship4 = 4;
+    ships->ship3 = 3;
+    ships->ship2 = 2;
+}
+
+// Check if all the ships are drowned
+int allShipsDrowned(shipsPerPlayer ships){
+    if(ships.ship5 == 0 && ships.ship4 == 0 && ships.ship3 == 0 && ships.ship2 == 0)
+        return 1;
+    return 0;
+}
+
+// Print matrix
+// TODO: Print the matrix with colors
+void printMatrix(char matrix[10][10], int player){
     // Print the numbers
     printf("  0 1 2 3 4 5 6 7 8 9\n");
     for(int i = 0; i < 10; i++){
@@ -44,6 +64,7 @@ void initBoard(char matrix[10][10]){
 
 // TODO: Finish the function looking at previous exercises
 void showInstructions(){
+    /*    
     int fd, m;
     // TODO: Check if the second parameter is correct
     fd = open("instructions.txt", 1);
@@ -58,11 +79,7 @@ void showInstructions(){
 
 
     close(fd);
-}
-
-// TODO: Finish the function
-void placeShips(){
-    // FIXME
+    */
 }
 
 int toNumber(char letter){
@@ -74,14 +91,119 @@ int toNumber(char letter){
     return letter - 65;
 }
 
-int validateCoordinates(coord coordinates){
+int validateCoordinates(char x, int y){
     // Check if the coordinates are valid
-    if(toNumber(coordinates.x) < 0 || toNumber(coordinates.x) > 9 || coordinates.y < 0 || coordinates.y > 9){
-        printf("Invalid coordinates\n");
+    if(toNumber(x) < 0 || toNumber(x) > 9 || y < 0 || y > 9){
+        printf("Invalid coordinates, try again\n");
         return 0;
     }
 
     return 1;
+}
+
+// TODO: Check if the new coordinates are in the row or column
+void fillEachShip(int n, char matrix[10][10], int player){
+    int orientation;
+    coord coordinates;
+    char tam = n + '0';
+
+    // Read the coordinates
+    printf("Select (1) to place the ship horizontally or (2) to place it vertically: ");
+    
+    // Read the orientation
+    do {
+        scanf("%d", &orientation);
+        // Clear the buffer
+        while(getchar() != '\n');
+        if(orientation != 1 && orientation != 2)
+            printf("Invalid orientation, try again: ");
+    } while(orientation != 1 && orientation != 2);
+    
+    // TODO: Check if the inputs are in range
+    printf("Enter the starting row (A-J): ");
+    coordinates.x = getchar();
+    printf("Enter the starting column (0-9): ");
+    scanf("%d", &coordinates.y);
+    // Clear the buffer
+    while(getchar() != '\n');
+
+    // Validate the coordinates
+    if(validateCoordinates(coordinates.x, coordinates.y)){
+        // Check if it is possible to place the ship
+        if((9 - coordinates.y + 1) < n && (9 - toNumber(coordinates.x) + 1) < n){
+            printf("The ship does not fit in that position, try again\n");
+            fillEachShip(n, matrix, player);
+            return;
+        }
+    }
+    else{
+        fillEachShip(n, matrix, player);
+        return;
+    }
+
+    // Horizontal
+    if(orientation == 1){
+        // Check if there is no overlap
+        for(int i = coordinates.y; i <= coordinates.y + n - 1; i++){
+            if(matrix[toNumber(coordinates.x)][i] != '.'){
+                printf("There is a overlap with other ship, try again\n");
+                fillEachShip(n, matrix, player);
+                return;
+            }
+        }
+
+        // Place the ship
+        for(int i = 0; i < n; i++){
+            if(player == 1)
+                boardP1[toNumber(coordinates.x)][coordinates.y + i] = tam;
+            else
+                boardP2[toNumber(coordinates.x)][coordinates.y + i] = tam;
+            
+        }
+    }
+    else{ // Vertical
+        // Check if there is no overlap
+        for(int i = toNumber(coordinates.x); i <= toNumber(coordinates.x) + n - 1; i++){
+            if(matrix[i][coordinates.y] != '.'){
+                printf("There is a overlap with other ship, try again\n");
+                fillEachShip(n, matrix, player);
+                return;
+            }
+        }
+
+        // Place the ship
+        for(int i = 0; i < n; i++){
+            if(player == 1)
+                boardP1[toNumber(coordinates.x) + i][coordinates.y] = tam;
+            else
+                boardP2[toNumber(coordinates.x) + i][coordinates.y] = tam;
+            
+        }
+    }
+
+    // Print the matrix
+    printMatrix(matrix, player);
+    return;
+}
+
+void placeShips(char matrix[10][10], int player){
+    // Create the ships
+    printMatrix(matrix, player);
+    printf("\n------ Player %d, place your ships ------\n", player);
+
+    printf("[Ship of size 5]:\n");
+    fillEachShip(5, matrix, player);
+
+    printf("\n[Ship of size 4]:\n");
+    fillEachShip(4, matrix, player);
+
+    printf("\n[Ship of size 3]:\n");
+    fillEachShip(3, matrix, player);
+
+    printf("\n[Ship of size 2]:\n");
+    fillEachShip(2, matrix, player);
+    
+    return;
 }
 
 void* playerInputThread(void* arg){
@@ -95,9 +217,27 @@ void* playerInputThread(void* arg){
 }
 
 int main(){
+    // Initialize the boards
     initBoard(boardP1);
     initBoard(boardP2);
+
+    // Initialize the ships
+    initShipsPerPlayer(&shipsP1);
+    initShipsPerPlayer(&shipsP2);
+
+    // Show the instructions
+    showInstructions();
+
+    // Place the ships
+    placeShips(boardP1, 1);
+    placeShips(boardP2, 2);
+
+    printf("\nHola, esta es la matriz del jugador 1\n");
+    printMatrix(boardP1, 1);
+    printf("\nHola, esta es la matriz del jugador 2\n");
+    printMatrix(boardP2, 2);
     
+    /* 
     pid_t pid;
     pid = fork();
 
@@ -141,6 +281,7 @@ int main(){
         perror("Error creating the process");
         exit(1);
     }
+    */
 
     return 0;
 }
