@@ -7,9 +7,9 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <semaphore.h>
-char boardP1[10][10], boardP2[10][10] = {'.'}; // Create the board for player 1 and 2
-sem_t sem_P1, sem_P2; // Create the semaphores for the players
+char boardP1[10][10], boardP2[10][10]; // Create the board for player 1 and 2
 int gameOver = 0; // Variable to check if the game is over
+int hit = 0; // Variable to check if the player hit a ship
 
 // Create a struct to store the coordinates of the ships
 typedef struct{
@@ -76,21 +76,22 @@ int allShipsDrowned(shipsPerPlayer ships){
 // TODO: Print the matrix with colors
 void printMatrix(char matrix[10][10]){
     // Print the numbers
-    printf("  0 1 2 3 4 5 6 7 8 9\n");
+    printf("          0 1 2 3 4 5 6 7 8 9\n");
     for(int i = 0; i < 10; i++){
         // Print the letters
-        printf("%c ", i + 65);
+        printf("        %c ", i + 65);
         for(int j = 0; j < 10; j++)
             printf("%c ", matrix[i][j]);
         printf("\n");
     }
+    printf("\n");
 }
 
 // Print opponent matrix
 // TODO: Print the matrix with colors
 void printBothMatrices(char matrixP1[10][10], char matrixP2[10][10]){
     // Print the numbers
-    printf("\n    __Your board__           __Opponent board__\n");
+    printf("\n    ==Your board==           ==Opponent board==\n\n");
     printf("  0 1 2 3 4 5 6 7 8 9        0 1 2 3 4 5 6 7 8 9\n");
     for(int i = 0; i < 10; i++){
         // Print the letters
@@ -110,6 +111,13 @@ void printBothMatrices(char matrixP1[10][10], char matrixP2[10][10]){
                 printf(". ");
         printf("\n");
     }
+}
+
+void clearTerminal(){
+    //printf("\033[H\033[J");
+    //printf("\033[2J");
+    system("clear");
+    fflush(stdout);
 }
 
 // Initialize the board
@@ -146,11 +154,6 @@ int toNumber(char letter){
 
     // Convert the letter to a number
     return letter - 65;
-}
-
-// Convert a string number of one digit to a integer number
-int toInt(char digit){
-    return digit - '0';
 }
 
 int validateCoordinates(char x, int y){
@@ -245,26 +248,31 @@ void fillEachShip(int n, char matrix[10][10], int player){
     }
 
     // Print the matrix
+    printf("\n");
     printMatrix(matrix);
     return;
 }
 
 void placeShips(char matrix[10][10], int player){
+    clearTerminal();
+
     // Create the ships
-    printf("\n------ Player %d, place your ships ------\n", player);
+    printf("\n  === PLAYER %d, PLACE YOUR SHIPS ===  \n\n", player);
     printMatrix(matrix);
 
-    printf("[Ship of size 5]:\n");
+    printf("[Ship of size 5]:\n\n");
     fillEachShip(5, matrix, player);
 
-    /* printf("\n[Ship of size 4]:\n");
+    /* printf("\n[Ship of size 4]:\n\n");
     fillEachShip(4, matrix, player);
 
-    printf("\n[Ship of size 3]:\n");
+    printf("\n[Ship of size 3]:\n\n");
     fillEachShip(3, matrix, player);
 
-    printf("\n[Ship of size 2]:\n");
+    printf("\n[Ship of size 2]:\n\n");
     fillEachShip(2, matrix, player); */
+
+    sleep(3);
     
     return;
 }
@@ -283,14 +291,16 @@ void* playerInputThread(void* arg){
             // Lock the mutex
             pthread_mutex_lock(&(sharedData.mutexThread));
 
-            sleep(2);
+            sleep(1);
             // Read the coordinates and validate them
             printf("\nEnter the row to attack (A-J): ");
             sharedData.coordinates.x = getchar();
+            sleep(1);
             printf("Enter the column to attack (0-9): ");
             scanf("%d", &sharedData.coordinates.y);
             // Clear the buffer
             while(getchar() != '\n');
+            printf("\n");
 
             // Validate the coordinates
             if(validateCoordinates(sharedData.coordinates.x, sharedData.coordinates.y)){
@@ -325,52 +335,41 @@ void* playerUpdateThread(void* arg){
             // Check if the data is ready
             pthread_mutex_lock(&(sharedData.mutexThread));
 
-            if(sharedData.ready){
-                // Process the data
-                printf("The other player attacked %c%d\n", sharedData.coordinates.x, sharedData.coordinates.y);
+            // Check which player is playing
+            if(sharedData.currentPlayer == 1){ // Player 1 attacked
+                char objective = boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y];
 
-                // Check which player is playing
-                if(sharedData.currentPlayer == 1){ // Player 1 attacked
-                    char objective = boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y];
-
-                    if(objective != '.' && objective != 'X' && objective != 'O'){
-                        printf("Player 1 hit player 2\n");
-                        addDrownedShip(objective, 2);
-                        boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
-                    }
-                    else{
-                        printf("Player 1 missed\n");
-                        boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
-                    }
+                if(objective != '.' && objective != 'X' && objective != 'O'){
+                    addDrownedShip(objective, 2);
+                    boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
+                    hit = 1;
                 }
-                else if(sharedData.currentPlayer == 2){ // Player 2 attacked
-                    char objective = boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y];
-
-                    if(objective != '.' && objective != 'X' && objective != 'O'){
-                        printf("Player 2 hit player 1\n");
-                        addDrownedShip(objective, 1);
-                        boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
-                    }
-                    else{
-                        printf("Player 2 missed\n");
-                        boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
-                    }
+                else{
+                    printf("You missed\n");
+                    boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
+                    hit = 0;
                 }
-
-                // Prepare for receiving new data
-                sharedData.ready = 0;
-                //printf("The ready flag was set to 0\n");
-                pthread_mutex_unlock(&(sharedData.mutexThread));
             }
-            else{
-                pthread_mutex_unlock(&(sharedData.mutexThread));
+            else if(sharedData.currentPlayer == 2){ // Player 2 attacked
+                char objective = boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y];
+
+                if(objective != '.' && objective != 'X' && objective != 'O'){
+                    addDrownedShip(objective, 1);
+                    boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
+                    hit = 1;
+                }
+                else{
+                    printf("You missed\n");
+                    boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
+                    hit = 0;
+                }
             }
 
-            if(sharedData.currentPlayer == 1)
-                printBothMatrices(boardP1, boardP2);
-            else
-                printBothMatrices(boardP2, boardP1);
+            // Prepare for other turn
+            sharedData.ready = -1;
+            pthread_mutex_unlock(&(sharedData.mutexThread));
         }
+
     }
 
     pthread_exit(NULL);
@@ -392,28 +391,82 @@ int main(){
     placeShips(boardP1, 1);
     placeShips(boardP2, 2);
 
-    printf("\n------Hola, esta es la matriz del jugador 1------\n");
-    printMatrix(boardP1);
-    printf("\n------Hola, esta es la matriz del jugador 2------\n\n");
-    printMatrix(boardP2);
-    printf("Now the game can start:D\n\n\n\n");
-
     // Init the mutex
     //pthread_mutex_init(&(sharedData.mutexThread), NULL);
 
-    // Declare the threads
-    pthread_t threadInputP1, threadUpdateP1;
-    pthread_t threadInputP2, threadUpdateP2;
-
+    // Init the shared data
+    sharedData.ready = -1;
     sharedData.currentPlayer = 1;
 
+    // Declare the threads
+    pthread_t threadInput, threadUpdate;
+
     // Create the threads
-    pthread_create(&threadInputP1, NULL, playerInputThread, NULL);
-    pthread_create(&threadUpdateP1, NULL, playerUpdateThread, NULL);
+    pthread_create(&threadInput, NULL, playerInputThread, NULL);
+    pthread_create(&threadUpdate, NULL, playerUpdateThread, NULL);
     
+    // TODO: Clear the terminal between turns
+    while(!gameOver){
+
+        if(sharedData.currentPlayer == 1){
+            sleep(4);
+            clearTerminal();
+            printf("\n            ===== PLAYER 1 TURN =====\n");
+            printBothMatrices(boardP1, boardP2);
+
+            hit = 0;
+            do{
+                // Start the turn
+                sharedData.ready = 0;
+
+                // Wait 
+                while(sharedData.ready == 0 || sharedData.ready == 1){
+                    sleep(1);
+                }
+
+                if(hit == 1){
+                    clearTerminal();
+                    printf("You hit the other player!, you can play again\n");
+                    printBothMatrices(boardP1, boardP2);
+                    sleep(1);
+                }
+            }while(hit);
+
+            // Give the turn to player 2
+            sharedData.currentPlayer = 2;
+        }
+        else if (sharedData.currentPlayer == 2){
+            sleep(4);
+            clearTerminal();
+            printf("\n            ===== PLAYER 2 TURN =====\n");
+            printBothMatrices(boardP2, boardP1);
+
+            hit = -1;
+            do{
+                // Start the turn
+                sharedData.ready = 0;
+
+                // Wait 
+                while(sharedData.ready == 0 || sharedData.ready == 1){
+                    sleep(1);
+                }
+
+                if(hit == 1){
+                    clearTerminal();
+                    printf("You hit the other player, you can play again\n\n");
+                    printBothMatrices(boardP2, boardP1);
+                    sleep(1);
+                }
+            }while(hit);
+
+            // Give the turn to player 1
+            sharedData.currentPlayer = 1;
+        }
+    }
+
     // Wait for the threads to finish
-    pthread_join(threadInputP1, NULL);
-    pthread_join(threadUpdateP1, NULL);
+    pthread_join(threadInput, NULL);
+    pthread_join(threadUpdate, NULL);
 
 
 
