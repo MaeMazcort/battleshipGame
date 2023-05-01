@@ -67,15 +67,24 @@ void printMatrix(char matrix[10][10]){
 
 // Print opponent matrix
 // TODO: Print the matrix with colors
-void printOpponentMatrix(char matrix[10][10]){
+void printBothMatrices(char matrixP1[10][10], char matrixP2[10][10]){
     // Print the numbers
-    printf("  0 1 2 3 4 5 6 7 8 9\n");
+    printf("\n    __Your board__           __Opponent board__\n");
+    printf("  0 1 2 3 4 5 6 7 8 9        0 1 2 3 4 5 6 7 8 9\n");
     for(int i = 0; i < 10; i++){
         // Print the letters
         printf("%c ", i + 65);
+
+        // Own matrix
         for(int j = 0; j < 10; j++)
-            if(matrix[i][j] == 'X' || matrix[i][j] == 'O')
-                printf("%c ", matrix[i][j]);
+            printf("%c ", matrixP1[i][j]);
+        printf("     ");
+        printf("%c ", i + 65);
+
+        // Opponent matrix
+        for(int j = 0; j < 10; j++)
+            if(matrixP2[i][j] == 'X' || matrixP2[i][j] == 'O')
+                printf("%c ", matrixP2[i][j]);
             else
                 printf(". ");
         printf("\n");
@@ -245,7 +254,7 @@ void* playerInputThread(void* arg){
 
             sleep(2);
             // Read the coordinates and validate them
-            printf("Enter the row to attack (A-J): ");
+            printf("\nEnter the row to attack (A-J): ");
             sharedData.coordinates.x = getchar();
             printf("Enter the column to attack (0-9): ");
             scanf("%d", &sharedData.coordinates.y);
@@ -317,8 +326,10 @@ void* playerUpdateThread(void* arg){
                 pthread_mutex_unlock(&(sharedData.mutexThread));
             }
 
-            printMatrix(boardP1);
-            printOpponentMatrix(boardP2);
+            if(sharedData.currentPlayer == 1)
+                printBothMatrices(boardP1, boardP2);
+            else
+                printBothMatrices(boardP2, boardP1);
         }
     }
 
