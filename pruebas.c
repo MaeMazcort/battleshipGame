@@ -44,6 +44,27 @@ void initShipsPerPlayer(shipsPerPlayer *ships){
     ships->ship2 = 2;
 }
 
+void addDrownedShip(char s, int player){
+    switch(s){
+        case '5':
+            if(player == 1) shipsP1.ship5--;
+            else shipsP2.ship5--;
+            break;
+        case '4':
+            if(player == 1) shipsP1.ship4--;
+            else shipsP2.ship4--;
+            break;
+        case '3':
+            if(player == 1) shipsP1.ship3--;
+            else shipsP2.ship3--;
+            break;
+        case '2':
+            if(player == 1) shipsP1.ship2--;
+            else shipsP2.ship2--;
+            break;
+    }
+}
+
 // Check if all the ships are drowned
 int allShipsDrowned(shipsPerPlayer ships){
     if(ships.ship5 == 0 && ships.ship4 == 0 && ships.ship3 == 0 && ships.ship2 == 0)
@@ -125,6 +146,11 @@ int toNumber(char letter){
 
     // Convert the letter to a number
     return letter - 65;
+}
+
+// Convert a string number of one digit to a integer number
+int toInt(char digit){
+    return digit - '0';
 }
 
 int validateCoordinates(char x, int y){
@@ -248,6 +274,11 @@ void* playerInputThread(void* arg){
 
     // Read the input of the player
     while(1){
+        // TODO: Add a conditional variable to end the game
+        if(gameOver){
+            pthread_exit(NULL);
+        }
+
         if(sharedData.ready == 0){
             // Lock the mutex
             pthread_mutex_lock(&(sharedData.mutexThread));
@@ -266,7 +297,7 @@ void* playerInputThread(void* arg){
                 
                 // Critical section
                 sharedData.ready = 1;
-                printf("The ready flag was set to 1\n");
+                //printf("The ready flag was set to 1\n");
                 // End of critical section
                 pthread_mutex_unlock(&(sharedData.mutexThread));
             }
@@ -285,6 +316,11 @@ void* playerInputThread(void* arg){
 void* playerUpdateThread(void* arg){
     // Updates the board of the player
     while(1){
+        // TODO: Add a conditional variable to end the game
+        if(gameOver){
+            pthread_exit(NULL);
+        }
+
         if(sharedData.ready == 1){
             // Check if the data is ready
             pthread_mutex_lock(&(sharedData.mutexThread));
@@ -294,32 +330,36 @@ void* playerUpdateThread(void* arg){
                 printf("The other player attacked %c%d\n", sharedData.coordinates.x, sharedData.coordinates.y);
 
                 // Check which player is playing
-                if(sharedData.currentPlayer == 1){
+                if(sharedData.currentPlayer == 1){ // Player 1 attacked
+                    char objective = boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y];
 
-                    if(boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] != '.'){
-                        printf("The other player hit your ship\n");
+                    if(objective != '.' && objective != 'X' && objective != 'O'){
+                        printf("Player 1 hit player 2\n");
+                        addDrownedShip(objective, 2);
                         boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
                     }
                     else{
-                        printf("The other player missed\n");
+                        printf("Player 1 missed\n");
                         boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
                     }
                 }
-                else if(sharedData.currentPlayer == 2){
+                else if(sharedData.currentPlayer == 2){ // Player 2 attacked
+                    char objective = boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y];
 
-                    if(boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] != '.'){
-                        printf("The other player hit your ship\n");
+                    if(objective != '.' && objective != 'X' && objective != 'O'){
+                        printf("Player 2 hit player 1\n");
+                        addDrownedShip(objective, 1);
                         boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
                     }
                     else{
-                        printf("The other player missed\n");
+                        printf("Player 2 missed\n");
                         boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
                     }
                 }
 
                 // Prepare for receiving new data
                 sharedData.ready = 0;
-                printf("The ready flag was set to 0\n");
+                //printf("The ready flag was set to 0\n");
                 pthread_mutex_unlock(&(sharedData.mutexThread));
             }
             else{
