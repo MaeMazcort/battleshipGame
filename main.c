@@ -9,6 +9,7 @@
 #include <semaphore.h>
 char boardP1[10][10], boardP2[10][10] = {'.'}; // Create the board for player 1 and 2
 sem_t sem_P1, sem_P2; // Create the semaphores for the players
+int gameOver = 0; // Variable to check if the game is over
 
 // Create a struct to store the coordinates of the ships
 typedef struct{
@@ -27,9 +28,10 @@ shipsPerPlayer shipsP1, shipsP2;
 
 // Shared data between the threads
 typedef struct{
-    pthread_mutex_t mutex;
+    pthread_mutex_t mutexPlayer, mutexThread;
     int ready;
     coord coordinates;
+    int currentPlayer;
 } SharedData;
 
 SharedData sharedData;
@@ -51,7 +53,7 @@ int allShipsDrowned(shipsPerPlayer ships){
 
 // Print matrix
 // TODO: Print the matrix with colors
-void printMatrix(char matrix[10][10], int player){
+void printMatrix(char matrix[10][10]){
     // Print the numbers
     printf("  0 1 2 3 4 5 6 7 8 9\n");
     for(int i = 0; i < 10; i++){
@@ -59,6 +61,23 @@ void printMatrix(char matrix[10][10], int player){
         printf("%c ", i + 65);
         for(int j = 0; j < 10; j++)
             printf("%c ", matrix[i][j]);
+        printf("\n");
+    }
+}
+
+// Print opponent matrix
+// TODO: Print the matrix with colors
+void printOpponentMatrix(char matrix[10][10]){
+    // Print the numbers
+    printf("  0 1 2 3 4 5 6 7 8 9\n");
+    for(int i = 0; i < 10; i++){
+        // Print the letters
+        printf("%c ", i + 65);
+        for(int j = 0; j < 10; j++)
+            if(matrix[i][j] == 'X' || matrix[i][j] == 'O')
+                printf("%c", matrix[i][j]);
+            else
+                printf(".");
         printf("\n");
     }
 }
@@ -190,13 +209,13 @@ void fillEachShip(int n, char matrix[10][10], int player){
     }
 
     // Print the matrix
-    printMatrix(matrix, player);
+    printMatrix(matrix);
     return;
 }
 
 void placeShips(char matrix[10][10], int player){
     // Create the ships
-    printMatrix(matrix, player);
+    printMatrix(matrix);
     printf("\n------ Player %d, place your ships ------\n", player);
 
     printf("[Ship of size 5]:\n");
@@ -219,6 +238,9 @@ void* playerInputThread(void* arg){
 
     // Read the input of the player
     while(1){
+        // Lock the mutex
+        pthread_mutex_lock(&(sharedData.mutexThread));
+
         // Read the coordinates and validate them
         printf("Enter the row to attack (A-J): ");
         sharedData.coordinates.x = getchar();
@@ -229,28 +251,18 @@ void* playerInputThread(void* arg){
 
         // Validate the coordinates
         if(validateCoordinates(sharedData.coordinates.x, sharedData.coordinates.y)){
-
-            // Check if the data is ready
-            pthread_mutex_lock(&(sharedData.mutex));
+            
             // Critical section
             sharedData.ready = 1;
             // End of critical section
-            pthread_mutex_unlock(&(sharedData.mutex));
-            
-            // Comunicate the results of the atack to the other player using signals
-
-
-            // Verify if a ship was sunk or if the game ended
-
-
-            // Pass the turn to the other player
-
+            pthread_mutex_unlock(&(sharedData.mutexThread));
         }
         else{
             continue;
+            // Unlock the mutex
+            pthread_mutex_unlock(&(sharedData.mutexThread));
         }
 
-        
     }
 
     pthread_exit(NULL);
@@ -260,15 +272,46 @@ void* playerInputThread(void* arg){
 void* playerUpdateThread(void* arg){
     // Updates the board of the player
     while(1){
-        // Check if the other player has already played
+        // Check if the data is ready
+        pthread_mutex_lock(&(sharedData.mutexThread));
 
-        // Update the board
+        if(sharedData.ready){
+            // Process the data
+            printf("The other player attacked %c%d\n", sharedData.coordinates.x, sharedData.coordinates.y);
 
-        // Check if the player won
+            // Check which player is playing
+            if(sharedData.currentPlayer == 1){
 
-        // Check if the player lost
+                if(boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] != '.'){
+                    printf("The other player hit your ship\n");
+                    boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
+                }
+                else{
+                    printf("The other player missed\n");
+                    boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
+                }
+            }
+            else if(sharedData.currentPlayer == 2){
 
-        // Check if the player wants to play again
+                if(boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] != '.'){
+                    printf("The other player hit your ship\n");
+                    boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
+                }
+                else{
+                    printf("The other player missed\n");
+                    boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
+                }
+            }
+
+            // Prepare for receiving new data
+            sharedData.ready = 0;
+            pthread_mutex_unlock(&(sharedData.mutexThread));
+        }
+        else{
+            pthread_mutex_unlock(&(sharedData.mutexThread));
+            continue;
+        }
+
     }
 
     pthread_exit(NULL);
@@ -291,55 +334,41 @@ int main(){
     placeShips(boardP2, 2);
 
     printf("\n------Hola, esta es la matriz del jugador 1------\n");
-    printMatrix(boardP1, 1);
+    printMatrix(boardP1);
     printf("\n------Hola, esta es la matriz del jugador 2------\n\n");
-    printMatrix(boardP2, 2);
-    
-    
-    pid_t pid;
-    pid = fork();
+    printMatrix(boardP2);
+    printf("Now the game can start:D\n\n\n\n");
 
-    if(pid == 0){ // Child process, player 2
-        // Initialize the semaphores
-        sem_init(&sem_P1, 0, 0);
-        sem_init(&sem_P2, 0, 1);
+    // Init the mutex
+    //pthread_mutex_init(&(sharedData.mutexThread), NULL);
 
-        // Create the threads
-        pthread_t inputThread, updateThread;
-        pthread_create(&inputThread, NULL, playerInputThread, NULL);
-        pthread_create(&updateThread, NULL, playerUpdateThread, NULL);
+    // Declare the threads
+    pthread_t threadInputP1, threadUpdateP1;
+    pthread_t threadInputP2, threadUpdateP2;
 
-        // Wait for the threads to finish
-        pthread_join(inputThread, NULL);
-        pthread_join(updateThread, NULL);
+    // Create the threads
+    pthread_create(&threadInputP1, NULL, playerInputThread, NULL);
+    pthread_create(&threadUpdateP1, NULL, playerUpdateThread, NULL);
+    pthread_create(&threadInputP2, NULL, playerInputThread, NULL);
+    pthread_create(&threadUpdateP2, NULL, playerUpdateThread, NULL);
 
-        // Destroy the semaphores
-        sem_destroy(&sem_P1);
-        sem_destroy(&sem_P2);
+    sharedData.currentPlayer = 1;
+    while(!gameOver){
+        if(sharedData.currentPlayer == 1){
+
+        }
+
+        if(sharedData.currentPlayer == 2){
+
+        }
+
     }
-    else if(pid > 0){ // Parent process, player 1
-        // Initialize the semaphores
-        sem_init(&sem_P1, 0, 1);
-        sem_init(&sem_P2, 0, 0);
 
-        // Create the threads
-        pthread_t inputThread, updateThread;
-        pthread_create(&inputThread, NULL, playerInputThread, NULL);
-        pthread_create(&updateThread, NULL, playerUpdateThread, NULL);
 
-        // Wait for the threads to finish
-        pthread_join(inputThread, NULL);
-        pthread_join(updateThread, NULL);
 
-        // Destroy the semaphores
-        sem_destroy(&sem_P1);
-        sem_destroy(&sem_P2);
-    }   
-    else{
-        perror("Error creating the process");
-        exit(1);
-    }
-    
+
+    // Destroy the mutex
+    //pthread_mutex_destroy(&(sharedData.mutexThread));
 
     return 0;
 }
