@@ -32,6 +32,8 @@ typedef struct{
     coord coordinates;
 } SharedData;
 
+SharedData sharedData;
+
 // Initialize the ships
 void initShipsPerPlayer(shipsPerPlayer *ships){
     ships->ship5 = 5;
@@ -214,20 +216,27 @@ void placeShips(char matrix[10][10], int player){
 
 // Atack the other player
 void* playerInputThread(void* arg){
-    coord coordinates;
 
     // Read the input of the player
     while(1){
-        // Read the coordinates 
-        printf("Enter the coordinates to attack (A-J): ");
-        coordinates.x = getchar();
-        printf("Enter the coordinates to attack (0-9): ");
-        scanf("%d", &coordinates.y);
+        // Read the coordinates and validate them
+        printf("Enter the row to attack (A-J): ");
+        sharedData.coordinates.x = getchar();
+        printf("Enter the column to attack (0-9): ");
+        scanf("%d", &sharedData.coordinates.y);
         // Clear the buffer
         while(getchar() != '\n');
 
         // Validate the coordinates
-        if(validateCoordinates(coordinates.x, coordinates.y)){
+        if(validateCoordinates(sharedData.coordinates.x, sharedData.coordinates.y)){
+
+            // Check if the data is ready
+            pthread_mutex_lock(&(sharedData.mutex));
+            // Critical section
+            sharedData.ready = 1;
+            // End of critical section
+            pthread_mutex_unlock(&(sharedData.mutex));
+            
             // Comunicate the results of the atack to the other player using signals
 
 
@@ -240,6 +249,8 @@ void* playerInputThread(void* arg){
         else{
             continue;
         }
+
+        
     }
 
     pthread_exit(NULL);
@@ -274,7 +285,7 @@ int main(){
 
     // Show the instructions
     showInstructions();
-
+    
     // Place the ships
     placeShips(boardP1, 1);
     placeShips(boardP2, 2);
