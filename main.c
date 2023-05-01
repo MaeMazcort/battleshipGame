@@ -7,8 +7,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <semaphore.h>
-char boardP1[10][10] = {'.'}; // Create the board for player 1
-char boardP2[10][10] = {'.'}; // Create the board for player 2
+char boardP1[10][10], boardP2[10][10] = {'.'}; // Create the board for player 1 and 2
 sem_t sem_P1, sem_P2; // Create the semaphores for the players
 
 // Create a struct to store the coordinates of the ships
@@ -94,7 +93,7 @@ int toNumber(char letter){
 int validateCoordinates(char x, int y){
     // Check if the coordinates are valid
     if(toNumber(x) < 0 || toNumber(x) > 9 || y < 0 || y > 9){
-        printf("Invalid coordinates, try again\n");
+        printf("Invalid coordinates, try again\n\n");
         return 0;
     }
 
@@ -116,7 +115,7 @@ void fillEachShip(int n, char matrix[10][10], int player){
         // Clear the buffer
         while(getchar() != '\n');
         if(orientation != 1 && orientation != 2)
-            printf("Invalid orientation, try again: ");
+            printf("\nInvalid orientation, try again: ");
     } while(orientation != 1 && orientation != 2);
     
     // TODO: Check if the inputs are in range
@@ -130,8 +129,8 @@ void fillEachShip(int n, char matrix[10][10], int player){
     // Validate the coordinates
     if(validateCoordinates(coordinates.x, coordinates.y)){
         // Check if it is possible to place the ship
-        if((9 - coordinates.y + 1) < n && (9 - toNumber(coordinates.x) + 1) < n){
-            printf("The ship does not fit in that position, try again\n");
+        if((9 - coordinates.y + 1) < n || (9 - toNumber(coordinates.x) + 1) < n){
+            printf("The ship does not fit in that position, try again\n\n");
             fillEachShip(n, matrix, player);
             return;
         }
@@ -146,7 +145,7 @@ void fillEachShip(int n, char matrix[10][10], int player){
         // Check if there is no overlap
         for(int i = coordinates.y; i <= coordinates.y + n - 1; i++){
             if(matrix[toNumber(coordinates.x)][i] != '.'){
-                printf("There is a overlap with other ship, try again\n");
+                printf("There is a overlap with other ship, try again\n\n");
                 fillEachShip(n, matrix, player);
                 return;
             }
@@ -207,10 +206,36 @@ void placeShips(char matrix[10][10], int player){
 }
 
 void* playerInputThread(void* arg){
-    // Reads the input from the user
+    // Read the input of the player
     while(1){
-        // Read the coordinates and validate them
+        // Read the coordinates
 
+        // Validate the coordinates
+
+        // Check if the coordinates were already used
+
+        // Check if the player won
+
+        // Check if the player lost
+
+        // Check if the player wants to play again
+    }
+
+    return NULL;
+}
+
+void* playerUpdateThread(void* arg){
+    // Updates the board of the player
+    while(1){
+        // Check if the other player has already played
+
+        // Update the board
+
+        // Check if the player won
+
+        // Check if the player lost
+
+        // Check if the player wants to play again
     }
 
     return NULL;
@@ -232,12 +257,12 @@ int main(){
     placeShips(boardP1, 1);
     placeShips(boardP2, 2);
 
-    printf("\nHola, esta es la matriz del jugador 1\n");
+    printf("\n------Hola, esta es la matriz del jugador 1------\n");
     printMatrix(boardP1, 1);
-    printf("\nHola, esta es la matriz del jugador 2\n");
+    printf("\n------Hola, esta es la matriz del jugador 2------\n");
     printMatrix(boardP2, 2);
     
-    /* 
+    
     pid_t pid;
     pid = fork();
 
@@ -281,7 +306,7 @@ int main(){
         perror("Error creating the process");
         exit(1);
     }
-    */
+    
 
     return 0;
 }
