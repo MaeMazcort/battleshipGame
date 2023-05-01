@@ -25,6 +25,13 @@ typedef struct{
 
 shipsPerPlayer shipsP1, shipsP2;
 
+// Shared data between the threads
+typedef struct{
+    pthread_mutex_t mutex;
+    int ready;
+    coord coordinates;
+} SharedData;
+
 // Initialize the ships
 void initShipsPerPlayer(shipsPerPlayer *ships){
     ships->ship5 = 5;
@@ -205,25 +212,40 @@ void placeShips(char matrix[10][10], int player){
     return;
 }
 
+// Atack the other player
 void* playerInputThread(void* arg){
+    coord coordinates;
+
     // Read the input of the player
     while(1){
-        // Read the coordinates
+        // Read the coordinates 
+        printf("Enter the coordinates to attack (A-J): ");
+        coordinates.x = getchar();
+        printf("Enter the coordinates to attack (0-9): ");
+        scanf("%d", &coordinates.y);
+        // Clear the buffer
+        while(getchar() != '\n');
 
         // Validate the coordinates
+        if(validateCoordinates(coordinates.x, coordinates.y)){
+            // Comunicate the results of the atack to the other player using signals
 
-        // Check if the coordinates were already used
 
-        // Check if the player won
+            // Verify if a ship was sunk or if the game ended
 
-        // Check if the player lost
 
-        // Check if the player wants to play again
+            // Pass the turn to the other player
+
+        }
+        else{
+            continue;
+        }
     }
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
+// Update the board of the player
 void* playerUpdateThread(void* arg){
     // Updates the board of the player
     while(1){
@@ -238,7 +260,7 @@ void* playerUpdateThread(void* arg){
         // Check if the player wants to play again
     }
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 int main(){
@@ -259,7 +281,7 @@ int main(){
 
     printf("\n------Hola, esta es la matriz del jugador 1------\n");
     printMatrix(boardP1, 1);
-    printf("\n------Hola, esta es la matriz del jugador 2------\n");
+    printf("\n------Hola, esta es la matriz del jugador 2------\n\n");
     printMatrix(boardP2, 2);
     
     
