@@ -75,9 +75,9 @@ void printOpponentMatrix(char matrix[10][10]){
         printf("%c ", i + 65);
         for(int j = 0; j < 10; j++)
             if(matrix[i][j] == 'X' || matrix[i][j] == 'O')
-                printf("%c", matrix[i][j]);
+                printf("%c ", matrix[i][j]);
             else
-                printf(".");
+                printf(". ");
         printf("\n");
     }
 }
@@ -216,20 +216,20 @@ void fillEachShip(int n, char matrix[10][10], int player){
 
 void placeShips(char matrix[10][10], int player){
     // Create the ships
-    printMatrix(matrix);
     printf("\n------ Player %d, place your ships ------\n", player);
+    printMatrix(matrix);
 
     printf("[Ship of size 5]:\n");
     fillEachShip(5, matrix, player);
 
-    printf("\n[Ship of size 4]:\n");
+    /* printf("\n[Ship of size 4]:\n");
     fillEachShip(4, matrix, player);
 
     printf("\n[Ship of size 3]:\n");
     fillEachShip(3, matrix, player);
 
     printf("\n[Ship of size 2]:\n");
-    fillEachShip(2, matrix, player);
+    fillEachShip(2, matrix, player); */
     
     return;
 }
@@ -239,33 +239,36 @@ void* playerInputThread(void* arg){
 
     // Read the input of the player
     while(1){
-        // Lock the mutex
-        pthread_mutex_lock(&(sharedData.mutexThread));
+        if(sharedData.ready == 0){
+            // Lock the mutex
+            pthread_mutex_lock(&(sharedData.mutexThread));
 
-        // Read the coordinates and validate them
-        printf("Enter the row to attack (A-J): ");
-        sharedData.coordinates.x = getchar();
-        printf("Enter the column to attack (0-9): ");
-        scanf("%d", &sharedData.coordinates.y);
-        // Clear the buffer
-        while(getchar() != '\n');
+            sleep(2);
+            // Read the coordinates and validate them
+            printf("Enter the row to attack (A-J): ");
+            sharedData.coordinates.x = getchar();
+            printf("Enter the column to attack (0-9): ");
+            scanf("%d", &sharedData.coordinates.y);
+            // Clear the buffer
+            while(getchar() != '\n');
 
-        // Validate the coordinates
-        if(validateCoordinates(sharedData.coordinates.x, sharedData.coordinates.y)){
-            
-            // Critical section
-            sharedData.ready = 1;
-            // End of critical section
-            pthread_mutex_unlock(&(sharedData.mutexThread));
+            // Validate the coordinates
+            if(validateCoordinates(sharedData.coordinates.x, sharedData.coordinates.y)){
+                
+                // Critical section
+                sharedData.ready = 1;
+                printf("The ready flag was set to 1\n");
+                // End of critical section
+                pthread_mutex_unlock(&(sharedData.mutexThread));
+            }
+            else{
+                continue;
+                // Unlock the mutex
+                pthread_mutex_unlock(&(sharedData.mutexThread));
+            }
+
         }
-        else{
-            continue;
-            // Unlock the mutex
-            pthread_mutex_unlock(&(sharedData.mutexThread));
-        }
-
     }
-
     pthread_exit(NULL);
 }
 
@@ -273,46 +276,50 @@ void* playerInputThread(void* arg){
 void* playerUpdateThread(void* arg){
     // Updates the board of the player
     while(1){
-        // Check if the data is ready
-        pthread_mutex_lock(&(sharedData.mutexThread));
+        if(sharedData.ready == 1){
+            // Check if the data is ready
+            pthread_mutex_lock(&(sharedData.mutexThread));
 
-        if(sharedData.ready){
-            // Process the data
-            printf("The other player attacked %c%d\n", sharedData.coordinates.x, sharedData.coordinates.y);
+            if(sharedData.ready){
+                // Process the data
+                printf("The other player attacked %c%d\n", sharedData.coordinates.x, sharedData.coordinates.y);
 
-            // Check which player is playing
-            if(sharedData.currentPlayer == 1){
+                // Check which player is playing
+                if(sharedData.currentPlayer == 1){
 
-                if(boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] != '.'){
-                    printf("The other player hit your ship\n");
-                    boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
+                    if(boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] != '.'){
+                        printf("The other player hit your ship\n");
+                        boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
+                    }
+                    else{
+                        printf("The other player missed\n");
+                        boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
+                    }
                 }
-                else{
-                    printf("The other player missed\n");
-                    boardP2[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
+                else if(sharedData.currentPlayer == 2){
+
+                    if(boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] != '.'){
+                        printf("The other player hit your ship\n");
+                        boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
+                    }
+                    else{
+                        printf("The other player missed\n");
+                        boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
+                    }
                 }
+
+                // Prepare for receiving new data
+                sharedData.ready = 0;
+                printf("The ready flag was set to 0\n");
+                pthread_mutex_unlock(&(sharedData.mutexThread));
             }
-            else if(sharedData.currentPlayer == 2){
-
-                if(boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] != '.'){
-                    printf("The other player hit your ship\n");
-                    boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'X';
-                }
-                else{
-                    printf("The other player missed\n");
-                    boardP1[toNumber(sharedData.coordinates.x)][sharedData.coordinates.y] = 'O';
-                }
+            else{
+                pthread_mutex_unlock(&(sharedData.mutexThread));
             }
 
-            // Prepare for receiving new data
-            sharedData.ready = 0;
-            pthread_mutex_unlock(&(sharedData.mutexThread));
+            printMatrix(boardP1);
+            printOpponentMatrix(boardP2);
         }
-        else{
-            pthread_mutex_unlock(&(sharedData.mutexThread));
-            continue;
-        }
-
     }
 
     pthread_exit(NULL);
@@ -347,23 +354,15 @@ int main(){
     pthread_t threadInputP1, threadUpdateP1;
     pthread_t threadInputP2, threadUpdateP2;
 
+    sharedData.currentPlayer = 1;
+
     // Create the threads
     pthread_create(&threadInputP1, NULL, playerInputThread, NULL);
     pthread_create(&threadUpdateP1, NULL, playerUpdateThread, NULL);
-    pthread_create(&threadInputP2, NULL, playerInputThread, NULL);
-    pthread_create(&threadUpdateP2, NULL, playerUpdateThread, NULL);
-
-    sharedData.currentPlayer = 1;
-    while(!gameOver){
-        if(sharedData.currentPlayer == 1){
-
-        }
-
-        if(sharedData.currentPlayer == 2){
-
-        }
-
-    }
+    
+    // Wait for the threads to finish
+    pthread_join(threadInputP1, NULL);
+    pthread_join(threadUpdateP1, NULL);
 
 
 
