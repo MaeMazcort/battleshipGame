@@ -3,6 +3,7 @@
         "wait.h": "c",
         "pthread.h": "c",
         "stat.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "stdlib.h": "c"
     }
 }

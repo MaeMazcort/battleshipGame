@@ -17,7 +17,6 @@
 #define RESET   "\x1b[0m"
 
 char boardP1[10][10], boardP2[10][10]; // Create the board for player 1 and 2
-int gameOver = 0; // Variable to check if the game is over
 int hit = 0; // Variable to check if the player hit a ship
 int winner = 0; // Variable to check who won the game
 int setAlarm = 0; // Variable to check if the alarm was set
@@ -78,7 +77,7 @@ void addDrownedShip(char s, int player){
 
 // Check if all the ships are drowned
 int allShipsDrowned(shipsPerPlayer ships){
-    if(ships.ship5 == 0 && ships.ship4 == 0 && ships.ship3 == 0 && ships.ship2 == 0)
+    if(/* ships.ship5 == 0 && ships.ship4 == 0 && ships.ship3 == 0 &&  */ships.ship2 == 0)
         return 1;
     return 0;
 }
@@ -315,14 +314,14 @@ void placeShips(char matrix[10][10], int player){
     printf("\n  === PLAYER %d, PLACE YOUR SHIPS ===  \n\n", player);
     printMatrix(matrix);
 
-    printf("[Ship of size 5]:\n\n");
+    /* printf("[Ship of size 5]:\n\n");
     fillEachShip(5, matrix, player);
 
     printf("\n[Ship of size 4]:\n\n");
     fillEachShip(4, matrix, player);
 
     printf("\n[Ship of size 3]:\n\n");
-    fillEachShip(3, matrix, player);
+    fillEachShip(3, matrix, player); */
 
     printf("\n[Ship of size 2]:\n\n");
     fillEachShip(2, matrix, player);
@@ -337,10 +336,14 @@ void* playerInputThread(void* arg){
 
     // Read the input of the player
     while(1){
-        // TODO: Add a conditional variable to end the game
-        gameOver = gameEnded();
-        if(gameOver)
-            execl("./gameOver", "gameOver", '0' + winner, NULL);
+        if(gameEnded()){
+            clearTerminal();
+            if(winner == 1)
+                execl("./gameOver", "gameOver", "1", NULL);
+            else
+                execl("./gameOver", "gameOver", "2" , NULL);
+            exit(1);
+        }
 
         if(sharedData.ready == 0){
             // Lock the mutex
@@ -381,10 +384,14 @@ void* playerInputThread(void* arg){
 void* playerUpdateThread(void* arg){
     // Updates the board of the player
     while(1){
-        // TODO: Add a conditional variable to end the game
-        gameOver = gameEnded();
-        if(gameOver)
-            execl("./gameOver", "gameOver", '0' + winner, NULL);
+        if(gameEnded()){
+            clearTerminal();
+            if(winner == 1)
+                execl("./gameOver", "gameOver", "1", NULL);
+            else
+                execl("./gameOver", "gameOver", "2" , NULL);
+            exit(1);
+        }
 
         if(sharedData.ready == 1){
             // Check if the data is ready
@@ -441,9 +448,14 @@ void processP1(){
         // Start the turn
         sharedData.ready = 0;
 
-        gameOver = gameEnded();
-        if(gameOver)
-            execl("./gameOver", "gameOver", '0' + winner, NULL);
+        if(gameEnded()){
+            clearTerminal();
+            if(winner == 1)
+                execl("./gameOver", "gameOver", "1", NULL);
+            else
+                execl("./gameOver", "gameOver", "2" , NULL);
+            exit(1);
+        }
 
         // Wait 
         while(sharedData.ready == 0 || sharedData.ready == 1){
@@ -473,9 +485,14 @@ void processP2(){
         // Start the turn
         sharedData.ready = 0;
         
-        gameOver = gameEnded();
-        if(gameOver)
-            execl("./gameOver", "gameOver", '0' + winner, NULL);
+        if(gameEnded()){
+            clearTerminal();
+            if(winner == 1)
+                execl("./gameOver", "gameOver", "1", NULL);
+            else
+                execl("./gameOver", "gameOver", "2" , NULL);
+            exit(1);
+        }
 
         // Wait 
         while(sharedData.ready == 0 || sharedData.ready == 1){
@@ -547,10 +564,15 @@ int main(){
     pthread_create(&threadUpdate, NULL, playerUpdateThread, NULL);
     
 
-    while(!gameOver){
-        gameOver = gameEnded();
-        if(gameOver)
-            execl("./gameOver", "gameOver", '0' + winner, NULL);
+    while(1){
+        if(gameEnded()){
+            clearTerminal();
+            if(winner == 1)
+                execl("./gameOver", "gameOver", "1", NULL);
+            else
+                execl("./gameOver", "gameOver", "2" , NULL);
+            exit(1);
+        }
 
         if(sharedData.currentPlayer == 1){
             processP1();
