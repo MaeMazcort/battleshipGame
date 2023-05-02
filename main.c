@@ -77,7 +77,7 @@ void addDrownedShip(char s, int player){
 
 // Check if all the ships are drowned
 int allShipsDrowned(shipsPerPlayer ships){
-    if(/* ships.ship5 == 0 && ships.ship4 == 0 && ships.ship3 == 0 &&  */ships.ship2 == 0)
+    if(ships.ship5 == 0 && ships.ship4 == 0 && ships.ship3 == 0 && ships.ship2 == 0)
         return 1;
     return 0;
 }
@@ -314,14 +314,14 @@ void placeShips(char matrix[10][10], int player){
     printf("\n  === PLAYER %d, PLACE YOUR SHIPS ===  \n\n", player);
     printMatrix(matrix);
 
-    /* printf("[Ship of size 5]:\n\n");
+    printf("[Ship of size 5]:\n\n");
     fillEachShip(5, matrix, player);
 
     printf("\n[Ship of size 4]:\n\n");
     fillEachShip(4, matrix, player);
 
     printf("\n[Ship of size 3]:\n\n");
-    fillEachShip(3, matrix, player); */
+    fillEachShip(3, matrix, player);
 
     printf("\n[Ship of size 2]:\n\n");
     fillEachShip(2, matrix, player);
