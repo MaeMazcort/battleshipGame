@@ -13,9 +13,6 @@
 #define BUFFER_SIZE 1024 // Buffer size
 #define RED     "\x1b[31m"
 #define GREEN   "\x1b[32m"
-#define YELLOW  "\x1b[33m"
-#define BLUE    "\x1b[34m"
-#define MAGENTA "\x1b[35m"
 #define CYAN    "\x1b[36m"
 #define RESET   "\x1b[0m"
 
@@ -124,7 +121,7 @@ void printBothMatrices(char matrixP1[10][10], char matrixP2[10][10]){
 
         // Own matrix
         for(int j = 0; j < 10; j++){
-            if(matrixP1[i][j] != '.' ){
+            if(!(matrixP1[i][j] == '.' )){
                 if(matrixP1[i][j] == 'X' )
                     printf(RED "%c ", matrixP1[i][j]);
                 else if(matrixP1[i][j] == 'O')
@@ -142,13 +139,15 @@ void printBothMatrices(char matrixP1[10][10], char matrixP2[10][10]){
 
         // Opponent matrix
         for(int j = 0; j < 10; j++){
-            if(matrixP2[i][j] != '.' ){
-                if(matrixP2[i][j] == 'X' )
+            if(!(matrixP2[i][j] == '.' )){
+                if(matrixP2[i][j] == 'X' ){
                     printf(RED "%c ", matrixP2[i][j]);
-                if(matrixP2[i][j] == 'O')
+                    printf(RESET);
+                }
+                else if(matrixP2[i][j] == 'O'){
                     printf(GREEN "%c ", matrixP2[i][j]);
-
-                printf(RESET);
+                    printf(RESET);
+                }
             }
             else
                 printf(". ");
