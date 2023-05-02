@@ -16,6 +16,7 @@ char boardP1[10][10], boardP2[10][10]; // Create the board for player 1 and 2
 int gameOver = 0; // Variable to check if the game is over
 int hit = 0; // Variable to check if the player hit a ship
 int winner = 0; // Variable to check who won the game
+int setAlarm = 0; // Variable to check if the alarm was set
 
 // Create a struct to store the coordinates of the ships
 typedef struct{
@@ -142,6 +143,10 @@ void initBoard(char matrix[10][10]){
             matrix[i][j] = '.';
 }
 
+void pressAnyKey(int signum){
+    printf("\n\nPRESS ANY KEY TO CONTINUE...");
+    getchar();
+}
 
 void showInstructions(){
     char buffer[BUFFER_SIZE];
@@ -169,8 +174,7 @@ void showInstructions(){
 
     close(fd);
 
-    printf("\n\nPRESS ANY KEY TO CONTINUE...");
-    getchar();
+    pause();
 }
 
 int toNumber(char letter){
@@ -302,17 +306,6 @@ void placeShips(char matrix[10][10], int player){
     return;
 }
 
-void waitTime(int signum){
-    printf("The time is up\n");
-    printf("The turn will pass to the other player\n");
-    if(sharedData.currentPlayer == 1){
-        sharedData.currentPlayer = 2;
-    }
-    else if(sharedData.currentPlayer == 2){
-        sharedData.currentPlayer = 1;
-    }
-}
-
 // Atack the other player
 void* playerInputThread(void* arg){
 
@@ -323,10 +316,6 @@ void* playerInputThread(void* arg){
         if(gameOver)
             execl("./gameOver", "gameOver", '0' + winner, NULL);
 
-        // Set the alarm
-        signal(SIGALRM, waitTime);
-        alarm(10);
-
         if(sharedData.ready == 0){
             // Lock the mutex
             pthread_mutex_lock(&(sharedData.mutexThread));
@@ -335,7 +324,6 @@ void* playerInputThread(void* arg){
             // Read the coordinates and validate them
             printf("\nEnter the row to attack (A-J): ");
             sharedData.coordinates.x = getchar();
-            sleep(1);
             printf("Enter the column to attack (0-9): ");
             scanf("%d", &sharedData.coordinates.y);
             // Clear the buffer
@@ -472,7 +460,10 @@ void processP2(){
 }
 
 int main(){
+    
     // Show the instructions
+    signal(SIGALRM, pressAnyKey);
+    alarm(5);
     showInstructions();
 
     int status;
@@ -487,9 +478,6 @@ int main(){
         initShipsPerPlayer(&shipsP1);
 
         // Place the ships
-        placeShips(boardP1, 1);
-
-        // Place the ship
         placeShips(boardP1, 1);
     }
 
