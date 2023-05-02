@@ -441,6 +441,10 @@ void processP1(){
         // Start the turn
         sharedData.ready = 0;
 
+        gameOver = gameEnded();
+        if(gameOver)
+            execl("./gameOver", "gameOver", '0' + winner, NULL);
+
         // Wait 
         while(sharedData.ready == 0 || sharedData.ready == 1){
             sleep(1);
@@ -468,6 +472,10 @@ void processP2(){
     do{
         // Start the turn
         sharedData.ready = 0;
+        
+        gameOver = gameEnded();
+        if(gameOver)
+            execl("./gameOver", "gameOver", '0' + winner, NULL);
 
         // Wait 
         while(sharedData.ready == 0 || sharedData.ready == 1){
@@ -550,7 +558,6 @@ int main(){
         else if (sharedData.currentPlayer == 2){
             processP2();
         }
-        gameOver = gameEnded();
     }
 
     // Wait for the threads to finish
