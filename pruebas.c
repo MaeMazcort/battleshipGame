@@ -6,7 +6,11 @@
 #include <sys/wait.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <string.h>
+#include <fcntl.h>
 #include <semaphore.h>
+#define BUFFER_SIZE 1024 // Buffer size
+
 char boardP1[10][10], boardP2[10][10]; // Create the board for player 1 and 2
 int gameOver = 0; // Variable to check if the game is over
 int hit = 0; // Variable to check if the player hit a ship
@@ -129,22 +133,33 @@ void initBoard(char matrix[10][10]){
 
 // TODO: Finish the function looking at previous exercises
 void showInstructions(){
-    /*    
-    int fd, m;
-    // TODO: Check if the second parameter is correct
-    fd = open("instructions.txt", 1);
+    char buffer[BUFFER_SIZE];
+    ssize_t bytesRead;
+
+    // Open the file
+    int fd = open("instructions.txt", 0);
 
     // Check if the file was opened correctly
     if(fd == -1){
         perror("Error opening the file");
-        exit(1);
+        return;
     }
 
     // Read the file
+    while((bytesRead = read(fd, buffer, BUFFER_SIZE)) > 0){
+        write(1, buffer, bytesRead);
+    }
 
+    // Check if the file was read correctly
+    if(bytesRead == -1){
+        perror("Error reading the file");
+        return;
+    }
 
     close(fd);
-    */
+
+    printf("\n\nPRESS ANY KEY TO CONTINUE...");
+    getchar();
 }
 
 int toNumber(char letter){
