@@ -310,9 +310,9 @@ void* playerInputThread(void* arg){
     // Read the input of the player
     while(1){
         // TODO: Add a conditional variable to end the game
-        if(gameOver){
-            pthread_exit(NULL);
-        }
+        gameOver = gameEnded();
+        if(gameOver)
+            execl("./gameOver", "gameOver", '0' + winner, NULL);
 
         if(sharedData.ready == 0){
             // Lock the mutex
@@ -354,9 +354,9 @@ void* playerUpdateThread(void* arg){
     // Updates the board of the player
     while(1){
         // TODO: Add a conditional variable to end the game
-        if(gameOver){
-            pthread_exit(NULL);
-        }
+        gameOver = gameEnded();
+        if(gameOver)
+            execl("./gameOver", "gameOver", '0' + winner, NULL);
 
         if(sharedData.ready == 1){
             // Check if the data is ready
@@ -402,6 +402,62 @@ void* playerUpdateThread(void* arg){
     pthread_exit(NULL);
 }
 
+void processP1(){
+    sleep(4);
+    clearTerminal();
+    printf("\n            ===== PLAYER 1 TURN =====\n");
+    printBothMatrices(boardP1, boardP2);
+
+    hit = 0;
+    do{
+        // Start the turn
+        sharedData.ready = 0;
+
+        // Wait 
+        while(sharedData.ready == 0 || sharedData.ready == 1){
+            sleep(1);
+        }
+
+        if(hit == 1){
+            clearTerminal();
+            printf("You hit the other player!, you can play again\n");
+            printBothMatrices(boardP1, boardP2);
+            sleep(1);
+        }
+    }while(hit);
+
+    // Give the turn to player 2
+    sharedData.currentPlayer = 2;
+}
+
+void processP2(){
+    sleep(4);
+    clearTerminal();
+    printf("\n            ===== PLAYER 2 TURN =====\n");
+    printBothMatrices(boardP2, boardP1);
+
+    hit = -1;
+    do{
+        // Start the turn
+        sharedData.ready = 0;
+
+        // Wait 
+        while(sharedData.ready == 0 || sharedData.ready == 1){
+            sleep(1);
+        }
+
+        if(hit == 1){
+            clearTerminal();
+            printf("You hit the other player, you can play again\n\n");
+            printBothMatrices(boardP2, boardP1);
+            sleep(1);
+        }
+    }while(hit);
+
+    // Give the turn to player 1
+    sharedData.currentPlayer = 1;
+}
+
 int main(){
     // Initialize the boards
     initBoard(boardP1);
@@ -432,66 +488,14 @@ int main(){
 
     while(!gameOver){
         gameOver = gameEnded();
-        if(gameOver){
-            printf("The game is over\n");
-            break;
-        }
+        if(gameOver)
+            execl("./gameOver", "gameOver", '0' + winner, NULL);
 
         if(sharedData.currentPlayer == 1){
-            sleep(4);
-            clearTerminal();
-            printf("\n            ===== PLAYER 1 TURN =====\n");
-            printBothMatrices(boardP1, boardP2);
-
-            hit = 0;
-            do{
-                // gameOver = gameEnded();
-                // Start the turn
-                sharedData.ready = 0;
-
-                // Wait 
-                while(sharedData.ready == 0 || sharedData.ready == 1){
-                    sleep(1);
-                }
-
-                if(hit == 1){
-                    clearTerminal();
-                    printf("You hit the other player!, you can play again\n");
-                    printBothMatrices(boardP1, boardP2);
-                    sleep(1);
-                }
-            }while(hit);
-
-            // Give the turn to player 2
-            sharedData.currentPlayer = 2;
+            processP1();
         }
         else if (sharedData.currentPlayer == 2){
-            sleep(4);
-            clearTerminal();
-            printf("\n            ===== PLAYER 2 TURN =====\n");
-            printBothMatrices(boardP2, boardP1);
-
-            hit = -1;
-            do{
-                // gameOver = gameEnded();
-                // Start the turn
-                sharedData.ready = 0;
-
-                // Wait 
-                while(sharedData.ready == 0 || sharedData.ready == 1){
-                    sleep(1);
-                }
-
-                if(hit == 1){
-                    clearTerminal();
-                    printf("You hit the other player, you can play again\n\n");
-                    printBothMatrices(boardP2, boardP1);
-                    sleep(1);
-                }
-            }while(hit);
-
-            // Give the turn to player 1
-            sharedData.currentPlayer = 1;
+            processP2();
         }
         gameOver = gameEnded();
     }
@@ -499,17 +503,6 @@ int main(){
     // Wait for the threads to finish
     pthread_join(threadInput, NULL);
     pthread_join(threadUpdate, NULL);
-
-    // Print the results
-    //TODO: Change for execl
-    clearTerminal();
-    if(winner == 1){
-        printf("Player 1 won the game\n");
-    }
-    else if(winner == 2){
-        printf("Player 2 won the game\n");
-    }
-
 
 
     return 0;
