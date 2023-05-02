@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <semaphore.h>
 #define BUFFER_SIZE 1024 // Buffer size
 
@@ -91,7 +92,6 @@ int gameEnded(){
 }
 
 // Print matrix
-// TODO: Print the matrix with colors
 void printMatrix(char matrix[10][10]){
     // Print the numbers
     printf("          0 1 2 3 4 5 6 7 8 9\n");
@@ -106,7 +106,6 @@ void printMatrix(char matrix[10][10]){
 }
 
 // Print opponent matrix
-// TODO: Print the matrix with colors
 void printBothMatrices(char matrixP1[10][10], char matrixP2[10][10]){
     // Print the numbers
     printf("\n    ==Your board==           ==Opponent board==\n\n");
@@ -143,7 +142,7 @@ void initBoard(char matrix[10][10]){
             matrix[i][j] = '.';
 }
 
-// TODO: Finish the function looking at previous exercises
+
 void showInstructions(){
     char buffer[BUFFER_SIZE];
     ssize_t bytesRead;
@@ -193,7 +192,6 @@ int validateCoordinates(char x, int y){
     return 1;
 }
 
-// TODO: Check if the new coordinates are in the row or column
 void fillEachShip(int n, char matrix[10][10], int player){
     int orientation;
     coord coordinates;
@@ -304,6 +302,17 @@ void placeShips(char matrix[10][10], int player){
     return;
 }
 
+void waitTime(int signum){
+    printf("The time is up\n");
+    printf("The turn will pass to the other player\n");
+    if(sharedData.currentPlayer == 1){
+        sharedData.currentPlayer = 2;
+    }
+    else if(sharedData.currentPlayer == 2){
+        sharedData.currentPlayer = 1;
+    }
+}
+
 // Atack the other player
 void* playerInputThread(void* arg){
 
@@ -313,6 +322,10 @@ void* playerInputThread(void* arg){
         gameOver = gameEnded();
         if(gameOver)
             execl("./gameOver", "gameOver", '0' + winner, NULL);
+
+        // Set the alarm
+        signal(SIGALRM, waitTime);
+        alarm(10);
 
         if(sharedData.ready == 0){
             // Lock the mutex
