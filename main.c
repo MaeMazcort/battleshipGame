@@ -140,14 +140,14 @@ void printBothMatrices(char matrixP1[10][10], char matrixP2[10][10]){
         // Opponent matrix
         for(int j = 0; j < 10; j++){
             if(!(matrixP2[i][j] == '.' )){
-                if(matrixP2[i][j] == 'X' ){
+                if(matrixP2[i][j] == 'X' )
                     printf(RED "%c ", matrixP2[i][j]);
-                    printf(RESET);
-                }
-                else if(matrixP2[i][j] == 'O'){
+                else if(matrixP2[i][j] == 'O')
                     printf(GREEN "%c ", matrixP2[i][j]);
-                    printf(RESET);
-                }
+                else
+                    printf(RESET ". ");
+
+                printf(RESET);
             }
             else
                 printf(". ");
