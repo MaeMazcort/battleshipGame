@@ -14,6 +14,7 @@
 char boardP1[10][10], boardP2[10][10]; // Create the board for player 1 and 2
 int gameOver = 0; // Variable to check if the game is over
 int hit = 0; // Variable to check if the player hit a ship
+int winner = 0; // Variable to check who won the game
 
 // Create a struct to store the coordinates of the ships
 typedef struct{
@@ -71,8 +72,21 @@ void addDrownedShip(char s, int player){
 
 // Check if all the ships are drowned
 int allShipsDrowned(shipsPerPlayer ships){
-    if(ships.ship5 == 0 && ships.ship4 == 0 && ships.ship3 == 0 && ships.ship2 == 0)
+    if(ships.ship5 == 0/*  && ships.ship4 == 0 && ships.ship3 == 0 && ships.ship2 == 0 */)
         return 1;
+    return 0;
+}
+
+int gameEnded(){
+    if(allShipsDrowned(shipsP1)){
+        winner = 2;
+        return 1;
+    }
+    else if(allShipsDrowned(shipsP2)){
+        winner = 1;
+        return 1;
+    }
+
     return 0;
 }
 
@@ -118,8 +132,6 @@ void printBothMatrices(char matrixP1[10][10], char matrixP2[10][10]){
 }
 
 void clearTerminal(){
-    //printf("\033[H\033[J");
-    //printf("\033[2J");
     system("clear");
     fflush(stdout);
 }
@@ -406,9 +418,6 @@ int main(){
     placeShips(boardP1, 1);
     placeShips(boardP2, 2);
 
-    // Init the mutex
-    //pthread_mutex_init(&(sharedData.mutexThread), NULL);
-
     // Init the shared data
     sharedData.ready = -1;
     sharedData.currentPlayer = 1;
@@ -420,8 +429,13 @@ int main(){
     pthread_create(&threadInput, NULL, playerInputThread, NULL);
     pthread_create(&threadUpdate, NULL, playerUpdateThread, NULL);
     
-    // TODO: Clear the terminal between turns
+
     while(!gameOver){
+        gameOver = gameEnded();
+        if(gameOver){
+            printf("The game is over\n");
+            break;
+        }
 
         if(sharedData.currentPlayer == 1){
             sleep(4);
@@ -431,6 +445,7 @@ int main(){
 
             hit = 0;
             do{
+                // gameOver = gameEnded();
                 // Start the turn
                 sharedData.ready = 0;
 
@@ -458,6 +473,7 @@ int main(){
 
             hit = -1;
             do{
+                // gameOver = gameEnded();
                 // Start the turn
                 sharedData.ready = 0;
 
@@ -477,17 +493,24 @@ int main(){
             // Give the turn to player 1
             sharedData.currentPlayer = 1;
         }
+        gameOver = gameEnded();
     }
 
     // Wait for the threads to finish
     pthread_join(threadInput, NULL);
     pthread_join(threadUpdate, NULL);
 
+    // Print the results
+    //TODO: Change for execl
+    clearTerminal();
+    if(winner == 1){
+        printf("Player 1 won the game\n");
+    }
+    else if(winner == 2){
+        printf("Player 2 won the game\n");
+    }
 
 
-
-    // Destroy the mutex
-    //pthread_mutex_destroy(&(sharedData.mutexThread));
 
     return 0;
 }

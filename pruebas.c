@@ -15,6 +15,7 @@
 char boardP1[10][10], boardP2[10][10]; // Create the board for player 1 and 2
 int gameOver = 0; // Variable to check if the game is over
 int hit = 0; // Variable to check if the player hit a ship
+int winner = 0; // Variable to check if there is a winner
 
 // Create a struct to store the coordinates of the ships
 typedef struct{
@@ -76,6 +77,20 @@ int allShipsDrowned(shipsPerPlayer ships){
         return 1;
     return 0;
 }
+
+int gameEnded(){
+    if(allShipsDrowned(shipsP1)){
+        winner = 2;
+        return 1;
+    }
+    else if(allShipsDrowned(shipsP2)){
+        winner = 1;
+        return 1;
+    }
+
+    return 0;
+}
+
 
 // Print matrix
 // TODO: Print the matrix with colors
@@ -472,18 +487,21 @@ int main(){
     placeShips(boardP2, 2);
 
     // Init the shared data
-    sharedData.ready = 0;
+    sharedData.ready = -1;
     sharedData.currentPlayer = 1;
 
     int status;
+
+    signal(SIGUSR1, processP1);
+    signal(SIGUSR2, processP2);
 
     pid_t childPid = fork();
 
     // Child process
     if(childPid == 0){
         printf("Entre en hijo\n");
-        signal(SIGUSR1, processP1);
-        //signal(SIGUSR2, processP2);
+
+        sem_post(&sem);
         pause();
         printf("Ya pase el pause\n");
 
@@ -507,24 +525,24 @@ int main(){
 
     // Parent process
     if(childPid > 0){
+
         while(!gameOver){
+            gameOver = gameEnded();
+
 
             if(sharedData.currentPlayer == 1){
                 printf("Entre en padre con jugador 1\n");
                 // Send the signal to the child for player 1
                 kill(childPid, SIGUSR1);
-                while(sharedData.ready == 0 || sharedData.ready == 1){
-                    printf("Esperando...\n");
-                    sleep(1);
-                }
+                sem_wait(&sem);
+                sleep(1);
             }
             else if (sharedData.currentPlayer == 2){
                 printf("Entre en padre con jugador 2\n");
                 // Send the signal to the child for player 2
                 kill(childPid, SIGUSR2);
-                while(sharedData.ready != -1){
-                    sleep(1);
-                }
+                sem_wait(&sem);
+                sleep(1);
             }
         }
 
