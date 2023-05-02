@@ -391,7 +391,7 @@ void* playerUpdateThread(void* arg){
     pthread_exit(NULL);
 }
 
-void processP1(int signal){
+void processP1(int signum){
     sleep(4);
     clearTerminal();
     printf("\n            ===== PLAYER 1 TURN =====\n");
@@ -419,7 +419,7 @@ void processP1(int signal){
     sharedData.currentPlayer = 2;
 }
 
-void processP2(int signal){
+void processP2(int signum){
     sleep(4);
     clearTerminal();
     printf("\n            ===== PLAYER 2 TURN =====\n");
@@ -447,6 +447,14 @@ void processP2(int signal){
     sharedData.currentPlayer = 1;
 }
 
+void prueba1(int signum){
+    printf("Señal 1 recibida\n");
+}
+
+void prueba2(int signum){
+    printf("Señal 2 recibida\n");
+}
+
 int main(){
     // Initialize the boards
     initBoard(boardP1);
@@ -464,13 +472,20 @@ int main(){
     placeShips(boardP2, 2);
 
     // Init the shared data
-    sharedData.ready = -1;
+    sharedData.ready = 0;
     sharedData.currentPlayer = 1;
+
+    int status;
 
     pid_t childPid = fork();
 
     // Child process
     if(childPid == 0){
+        printf("Entre en hijo\n");
+        signal(SIGUSR1, processP1);
+        //signal(SIGUSR2, processP2);
+        pause();
+        printf("Ya pase el pause\n");
 
         // Declare the threads
         pthread_t threadInput, threadUpdate;
@@ -479,16 +494,13 @@ int main(){
         pthread_create(&threadInput, NULL, playerInputThread, NULL);
         pthread_create(&threadUpdate, NULL, playerUpdateThread, NULL);
 
+
         // Wait for the threads to finish
         pthread_join(threadInput, NULL);
         pthread_join(threadUpdate, NULL);
 
 
         // Manage the signal
-        signal(SIGUSR1, processP1);
-        signal(SIGUSR2, processP2);
-
-        pause();
 
         return 1;
     }
@@ -498,16 +510,24 @@ int main(){
         while(!gameOver){
 
             if(sharedData.currentPlayer == 1){
+                printf("Entre en padre con jugador 1\n");
                 // Send the signal to the child for player 1
                 kill(childPid, SIGUSR1);
+                while(sharedData.ready == 0 || sharedData.ready == 1){
+                    printf("Esperando...\n");
+                    sleep(1);
+                }
             }
             else if (sharedData.currentPlayer == 2){
+                printf("Entre en padre con jugador 2\n");
                 // Send the signal to the child for player 2
                 kill(childPid, SIGUSR2);
+                while(sharedData.ready != -1){
+                    sleep(1);
+                }
             }
         }
 
-        waitpid(childPid, NULL, 0);
 
         return 1;
     }
