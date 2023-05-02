@@ -459,20 +459,45 @@ void processP2(){
 }
 
 int main(){
-    // Initialize the boards
-    initBoard(boardP1);
-    initBoard(boardP2);
-
-    // Initialize the ships
-    initShipsPerPlayer(&shipsP1);
-    initShipsPerPlayer(&shipsP2);
-
     // Show the instructions
     showInstructions();
-    
-    // Place the ships
-    placeShips(boardP1, 1);
-    placeShips(boardP2, 2);
+
+    int status;
+    pid_t player1Process, player2Process;
+
+    player1Process = fork();
+    if(player1Process == 0){
+        // Initialize the board
+        initBoard(boardP1);
+
+        // Initialize the ship
+        initShipsPerPlayer(&shipsP1);
+
+        // Place the ships
+        placeShips(boardP1, 1);
+
+        // Place the ship
+        placeShips(boardP1, 1);
+    }
+
+    // Wait for the player 1 to finish initializing
+    waitpid(player1Process, &status, 0);
+
+    player2Process = fork();
+    if(player2Process == 0){
+        // Initialize the board
+        initBoard(boardP2);
+
+        // Initialize the ship
+        initShipsPerPlayer(&shipsP2);
+
+        // Place the ship
+        placeShips(boardP2, 2);
+    }
+
+    // Wait for the player 2 to finish initializing
+    waitpid(player2Process, &status, 0);
+
 
     // Init the shared data
     sharedData.ready = -1;
