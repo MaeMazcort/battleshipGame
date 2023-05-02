@@ -11,6 +11,13 @@
 #include <signal.h>
 #include <semaphore.h>
 #define BUFFER_SIZE 1024 // Buffer size
+#define RED     "\x1b[31m"
+#define GREEN   "\x1b[32m"
+#define YELLOW  "\x1b[33m"
+#define BLUE    "\x1b[34m"
+#define MAGENTA "\x1b[35m"
+#define CYAN    "\x1b[36m"
+#define RESET   "\x1b[0m"
 
 char boardP1[10][10], boardP2[10][10]; // Create the board for player 1 and 2
 int gameOver = 0; // Variable to check if the game is over
@@ -74,7 +81,7 @@ void addDrownedShip(char s, int player){
 
 // Check if all the ships are drowned
 int allShipsDrowned(shipsPerPlayer ships){
-    if(ships.ship5 == 0/*  && ships.ship4 == 0 && ships.ship3 == 0 && ships.ship2 == 0 */)
+    if(ships.ship5 == 0 && ships.ship4 == 0 && ships.ship3 == 0 && ships.ship2 == 0)
         return 1;
     return 0;
 }
@@ -116,17 +123,36 @@ void printBothMatrices(char matrixP1[10][10], char matrixP2[10][10]){
         printf("%c ", i + 65);
 
         // Own matrix
-        for(int j = 0; j < 10; j++)
-            printf("%c ", matrixP1[i][j]);
+        for(int j = 0; j < 10; j++){
+            if(matrixP1[i][j] != '.' ){
+                if(matrixP1[i][j] == 'X' )
+                    printf(RED "%c ", matrixP1[i][j]);
+                else if(matrixP1[i][j] == 'O')
+                    printf(GREEN "%c ", matrixP1[i][j]);
+                else
+                    printf(CYAN "%c ", matrixP1[i][j]);
+
+                printf(RESET);
+            }
+            else
+                printf("%c ", matrixP1[i][j]);
+        }
         printf("     ");
         printf("%c ", i + 65);
 
         // Opponent matrix
-        for(int j = 0; j < 10; j++)
-            if(matrixP2[i][j] == 'X' || matrixP2[i][j] == 'O')
-                printf("%c ", matrixP2[i][j]);
+        for(int j = 0; j < 10; j++){
+            if(matrixP2[i][j] != '.' ){
+                if(matrixP2[i][j] == 'X' )
+                    printf(RED "%c ", matrixP2[i][j]);
+                if(matrixP2[i][j] == 'O')
+                    printf(GREEN "%c ", matrixP2[i][j]);
+
+                printf(RESET);
+            }
             else
                 printf(". ");
+        }
         printf("\n");
     }
 }
@@ -149,6 +175,7 @@ void pressAnyKey(int signum){
 }
 
 void showInstructions(){
+    clearTerminal();
     char buffer[BUFFER_SIZE];
     ssize_t bytesRead;
 
@@ -292,14 +319,14 @@ void placeShips(char matrix[10][10], int player){
     printf("[Ship of size 5]:\n\n");
     fillEachShip(5, matrix, player);
 
-    /* printf("\n[Ship of size 4]:\n\n");
+    printf("\n[Ship of size 4]:\n\n");
     fillEachShip(4, matrix, player);
 
     printf("\n[Ship of size 3]:\n\n");
     fillEachShip(3, matrix, player);
 
     printf("\n[Ship of size 2]:\n\n");
-    fillEachShip(2, matrix, player); */
+    fillEachShip(2, matrix, player);
 
     sleep(3);
     
@@ -324,6 +351,7 @@ void* playerInputThread(void* arg){
             // Read the coordinates and validate them
             printf("\nEnter the row to attack (A-J): ");
             sharedData.coordinates.x = getchar();
+            sleep(0.5);
             printf("Enter the column to attack (0-9): ");
             scanf("%d", &sharedData.coordinates.y);
             // Clear the buffer
