@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <semaphore.h>
 #define BUFFER_SIZE 1024 // Buffer size
 
@@ -390,6 +391,62 @@ void* playerUpdateThread(void* arg){
     pthread_exit(NULL);
 }
 
+void processP1(int signal){
+    sleep(4);
+    clearTerminal();
+    printf("\n            ===== PLAYER 1 TURN =====\n");
+    printBothMatrices(boardP1, boardP2);
+
+    hit = 0;
+    do{
+        // Start the turn
+        sharedData.ready = 0;
+
+        // Wait 
+        while(sharedData.ready == 0 || sharedData.ready == 1){
+            sleep(1);
+        }
+
+        if(hit == 1){
+            clearTerminal();
+            printf("You hit the other player!, you can play again\n");
+            printBothMatrices(boardP1, boardP2);
+            sleep(1);
+        }
+    }while(hit);
+
+    // Give the turn to player 2
+    sharedData.currentPlayer = 2;
+}
+
+void processP2(int signal){
+    sleep(4);
+    clearTerminal();
+    printf("\n            ===== PLAYER 2 TURN =====\n");
+    printBothMatrices(boardP2, boardP1);
+
+    hit = -1;
+    do{
+        // Start the turn
+        sharedData.ready = 0;
+
+        // Wait 
+        while(sharedData.ready == 0 || sharedData.ready == 1){
+            sleep(1);
+        }
+
+        if(hit == 1){
+            clearTerminal();
+            printf("You hit the other player, you can play again\n\n");
+            printBothMatrices(boardP2, boardP1);
+            sleep(1);
+        }
+    }while(hit);
+
+    // Give the turn to player 1
+    sharedData.currentPlayer = 1;
+}
+
 int main(){
     // Initialize the boards
     initBoard(boardP1);
@@ -406,88 +463,56 @@ int main(){
     placeShips(boardP1, 1);
     placeShips(boardP2, 2);
 
-    // Init the mutex
-    //pthread_mutex_init(&(sharedData.mutexThread), NULL);
-
     // Init the shared data
     sharedData.ready = -1;
     sharedData.currentPlayer = 1;
 
-    // Declare the threads
-    pthread_t threadInput, threadUpdate;
+    pid_t childPid = fork();
 
-    // Create the threads
-    pthread_create(&threadInput, NULL, playerInputThread, NULL);
-    pthread_create(&threadUpdate, NULL, playerUpdateThread, NULL);
-    
-    // TODO: Clear the terminal between turns
-    while(!gameOver){
+    // Child process
+    if(childPid == 0){
 
-        if(sharedData.currentPlayer == 1){
-            sleep(4);
-            clearTerminal();
-            printf("\n            ===== PLAYER 1 TURN =====\n");
-            printBothMatrices(boardP1, boardP2);
+        // Declare the threads
+        pthread_t threadInput, threadUpdate;
 
-            hit = 0;
-            do{
-                // Start the turn
-                sharedData.ready = 0;
+        // Create the threads
+        pthread_create(&threadInput, NULL, playerInputThread, NULL);
+        pthread_create(&threadUpdate, NULL, playerUpdateThread, NULL);
 
-                // Wait 
-                while(sharedData.ready == 0 || sharedData.ready == 1){
-                    sleep(1);
-                }
+        // Wait for the threads to finish
+        pthread_join(threadInput, NULL);
+        pthread_join(threadUpdate, NULL);
 
-                if(hit == 1){
-                    clearTerminal();
-                    printf("You hit the other player!, you can play again\n");
-                    printBothMatrices(boardP1, boardP2);
-                    sleep(1);
-                }
-            }while(hit);
 
-            // Give the turn to player 2
-            sharedData.currentPlayer = 2;
-        }
-        else if (sharedData.currentPlayer == 2){
-            sleep(4);
-            clearTerminal();
-            printf("\n            ===== PLAYER 2 TURN =====\n");
-            printBothMatrices(boardP2, boardP1);
+        // Manage the signal
+        signal(SIGUSR1, processP1);
+        signal(SIGUSR2, processP2);
 
-            hit = -1;
-            do{
-                // Start the turn
-                sharedData.ready = 0;
+        pause();
 
-                // Wait 
-                while(sharedData.ready == 0 || sharedData.ready == 1){
-                    sleep(1);
-                }
-
-                if(hit == 1){
-                    clearTerminal();
-                    printf("You hit the other player, you can play again\n\n");
-                    printBothMatrices(boardP2, boardP1);
-                    sleep(1);
-                }
-            }while(hit);
-
-            // Give the turn to player 1
-            sharedData.currentPlayer = 1;
-        }
+        return 1;
     }
 
-    // Wait for the threads to finish
-    pthread_join(threadInput, NULL);
-    pthread_join(threadUpdate, NULL);
+    // Parent process
+    if(childPid > 0){
+        while(!gameOver){
+
+            if(sharedData.currentPlayer == 1){
+                // Send the signal to the child for player 1
+                kill(childPid, SIGUSR1);
+            }
+            else if (sharedData.currentPlayer == 2){
+                // Send the signal to the child for player 2
+                kill(childPid, SIGUSR2);
+            }
+        }
+
+        waitpid(childPid, NULL, 0);
+
+        return 1;
+    }
 
 
-
-
-    // Destroy the mutex
-    //pthread_mutex_destroy(&(sharedData.mutexThread));
 
     return 0;
 }
