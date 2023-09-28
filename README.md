@@ -1,2 +1,2 @@
 # battleshipGame
-![Diagram](.BattleshipSO.png/)
+![Diagram](./BattleshipSO.png)
